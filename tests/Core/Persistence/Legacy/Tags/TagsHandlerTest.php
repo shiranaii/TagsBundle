@@ -8,6 +8,7 @@ use Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Gateway;
 use Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Handler;
 use Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Mapper;
 use Netgen\TagsBundle\SPI\Persistence\Tags\CreateStruct;
+use Netgen\TagsBundle\SPI\Persistence\Tags\SearchResult;
 use Netgen\TagsBundle\SPI\Persistence\Tags\SynonymCreateStruct;
 use Netgen\TagsBundle\SPI\Persistence\Tags\Tag;
 use Netgen\TagsBundle\SPI\Persistence\Tags\TagInfo;
@@ -403,6 +404,49 @@ class TagsHandlerTest extends TestCase
         $tagsCount = $this->tagsHandler->getTagsByKeywordCount('eztags', 'eng-GB');
 
         $this->assertEquals(2, $tagsCount);
+    }
+
+    /**
+     * @covers \Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Handler::searchTags
+     */
+    public function testSearchTags()
+    {
+        $tagsArray = array(
+            array('eztags_keyword' => 'eztags', 'eztags_main_language_id' => 4),
+            array('eztags_keyword' => 'eztags', 'eztags_main_language_id' => 4),
+        );
+
+        $tags = array(
+            new Tag(array('keywords' => array('eng-GB' => 'eztags'))),
+            new Tag(array('keywords' => array('eng-GB' => 'eztags'))),
+        );
+
+        $this->gateway
+            ->expects($this->once())
+            ->method('getTagsByKeyword')
+            ->with('eztags', 'eng-GB')
+            ->will($this->returnValue($tagsArray));
+
+        $this->gateway
+            ->expects($this->once())
+            ->method('getTagsByKeywordCount')
+            ->with('eztags', 'eng-GB')
+            ->will($this->returnValue(2));
+
+        $this->mapper
+            ->expects($this->once())
+            ->method('extractTagListFromRows')
+            ->with($tagsArray)
+            ->will($this->returnValue($tags));
+
+        $searchResult = new SearchResult(
+            array(
+                'tags' => $tags,
+                'totalCount' => 2,
+            )
+        );
+
+        $this->assertEquals($searchResult, $this->tagsHandler->searchTags('eztags', 'eng-GB'));
     }
 
     /**
@@ -988,10 +1032,108 @@ class TagsHandlerTest extends TestCase
     /**
      * @covers \Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Handler::copySubtree
      * @covers \Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Handler::recursiveCopySubtree
+     * @covers \Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Handler::updateSubtreeModificationTime
      */
     public function testCopySubtree()
     {
-        $this->markTestIncomplete('@TODO: Implement test for copySubtree');
+        $handler = $this->getTagsHandler(array('load', 'create', 'loadSynonyms', 'addSynonym', 'loadChildren', 'loadTagInfo'));
+
+        $sourceTag = new Tag(
+            array(
+                'id' => 5,
+                'parentTagId' => 1,
+                'keywords' => array(
+                    'eng-GB' => 'netgen',
+                ),
+                'alwaysAvailable' => true,
+                'mainLanguageCode' => 'eng-GB',
+            )
+        );
+
+        $synonymTag = new Tag(
+            array(
+                'id' => 21,
+                'parentTagId' => 1,
+                'mainTagId' => 5,
+                'keywords' => array(
+                    'eng-GB' => 'netgen_synonym',
+                ),
+                'alwaysAvailable' => true,
+                'mainLanguageCode' => 'eng-GB',
+            )
+        );
+
+        $childrenTag = new Tag(
+            array(
+                'id' => 45,
+                'parentTagId' => 5,
+                'keywords' => array(
+                    'eng-GB' => 'netgen_children',
+                ),
+                'alwaysAvailable' => true,
+                'mainLanguageCode' => 'eng-GB',
+            )
+        );
+
+        $createdTag = new Tag(
+            array(
+                'id' => 12,
+                'parentTagId' => 10,
+                'keywords' => array(
+                    'eng-GB' => 'netgen',
+                ),
+                'remoteId' => 'test_remote_id',
+                'alwaysAvailable' => true,
+                'mainLanguageCode' => 'eng-GB',
+            )
+        );
+
+        $createdTagInfo = new TagInfo(
+            array(
+                'id' => 12,
+                'parentTagId' => 10,
+                'mainTagId' => 2,
+            )
+        );
+
+        $handler
+            ->expects($this->exactly(2))
+            ->method('load')
+            ->withConsecutive([$sourceTag->id], [$createdTag->id])
+            ->will($this->onConsecutiveCalls($sourceTag, $createdTag));
+
+        $handler
+            ->expects($this->exactly(2))
+            ->method('create')
+            ->willReturn($createdTag);
+
+        $handler
+            ->expects($this->exactly(2))
+            ->method('loadSynonyms')
+            ->withConsecutive([$sourceTag->id], [$childrenTag->id])
+            ->will($this->onConsecutiveCalls(array($synonymTag), array()));
+
+        $handler
+            ->expects($this->once())
+            ->method('addSynonym');
+
+        $handler
+            ->expects($this->exactly(2))
+            ->method('loadChildren')
+            ->withConsecutive([$sourceTag->id], [$childrenTag->id])
+            ->will($this->onConsecutiveCalls(array($childrenTag), array()));
+
+        $handler
+            ->expects($this->once())
+            ->method('loadTagInfo')
+            ->with($createdTag->id)
+            ->will($this->returnValue($createdTagInfo));
+
+        $this->gateway
+            ->expects($this->exactly(2))
+            ->method('updateSubtreeModificationTime');
+
+        $this->assertEquals($createdTag, $handler->copySubtree($sourceTag->id, $createdTag->parentTagId));
     }
 
     /**
