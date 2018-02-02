@@ -5,6 +5,7 @@ namespace Netgen\TagsBundle\Tests\Core\SignalSlot;
 use eZ\Publish\API\Repository\Values\Content\Content as APIContent;
 use eZ\Publish\Core\Repository\Values\Content\Content;
 use eZ\Publish\Core\SignalSlot\SignalDispatcher;
+use Netgen\TagsBundle\API\Repository\Values\Tags\SearchResult;
 use Netgen\TagsBundle\API\Repository\Values\Tags\SynonymCreateStruct;
 use Netgen\TagsBundle\API\Repository\Values\Tags\Tag;
 use Netgen\TagsBundle\API\Repository\Values\Tags\TagCreateStruct;
@@ -202,6 +203,32 @@ class TagsServiceTest extends TestCase
         $tagsCount = $signalSlotService->getTagsByKeywordCount('netgen', 'eng-GB');
 
         $this->assertEquals(2, $tagsCount);
+    }
+
+    /**
+     * @covers \Netgen\TagsBundle\Core\SignalSlot\TagsService::searchTags
+     */
+    public function testSearchTags()
+    {
+        $searchResult = new SearchResult(
+            array(
+                'tags' => array(
+                    new Tag(array('mainTagId' => 42)),
+                    new Tag(array('mainTagId' => 42)),
+                ),
+                'totalCount' => 2,
+            )
+        );
+
+        $this->tagsService
+            ->expects($this->once())
+            ->method('searchTags')
+            ->with('netgen', 'eng-GB')
+            ->will($this->returnValue($searchResult));
+
+        $signalSlotService = $this->getSignalSlotService();
+
+        $this->assertEquals($searchResult, $signalSlotService->searchTags('netgen', 'eng-GB'));
     }
 
     /**
