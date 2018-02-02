@@ -411,6 +411,7 @@ class DoctrineDatabaseTest extends TestCase
 
     /**
      * @covers \Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Gateway\DoctrineDatabase::getTagsByKeyword
+     * @covers \Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Gateway\DoctrineDatabase::createTagIdsQuery
      * @covers \Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Gateway\DoctrineDatabase::createTagFindQuery
      */
     public function testGetTagsByKeyword()
@@ -435,6 +436,7 @@ class DoctrineDatabaseTest extends TestCase
 
     /**
      * @covers \Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Gateway\DoctrineDatabase::getTagsByKeyword
+     * @covers \Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Gateway\DoctrineDatabase::createTagIdsQuery
      * @covers \Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Gateway\DoctrineDatabase::createTagFindQuery
      */
     public function testGetTagsByKeywordWithoutAlwaysAvailable()
@@ -453,6 +455,30 @@ class DoctrineDatabaseTest extends TestCase
     public function testGetTagsByKeywordCountWithoutAlwaysAvailable()
     {
         $tagsCount = $this->tagsGateway->getTagsByKeywordCount('eztags', 'eng-GB', false);
+
+        $this->assertEquals(2, $tagsCount);
+    }
+
+    /**
+     * @covers \Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Gateway\DoctrineDatabase::getTagsByKeyword
+     * @covers \Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Gateway\DoctrineDatabase::createTagFindQuery
+     */
+    public function testGetTagsByKeywordWithoutExactMatch()
+    {
+        $data = $this->tagsGateway->getTagsByKeyword('eztags', 'eng-GB', false, false);
+
+        $this->assertCount(2, $data);
+        $this->assertEquals('eztags', $data[0]['eztags_keyword_keyword']);
+        $this->assertEquals('eztags', $data[1]['eztags_keyword_keyword']);
+    }
+
+    /**
+     * @covers \Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Gateway\DoctrineDatabase::getTagsByKeywordCount
+     * @covers \Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Gateway\DoctrineDatabase::createTagCountQuery
+     */
+    public function testGetTagsByKeywordCountWithoutExactMatch()
+    {
+        $tagsCount = $this->tagsGateway->getTagsByKeywordCount('eztags', 'eng-GB', false, false);
 
         $this->assertEquals(2, $tagsCount);
     }
@@ -808,6 +834,14 @@ class DoctrineDatabaseTest extends TestCase
     }
 
     /**
+     * @covers \Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Gateway\DoctrineDatabase::deleteTag
+     */
+    public function testDeleteTagWithNonExistingId()
+    {
+        $this->assertNull($this->tagsGateway->deleteTag(458));
+    }
+
+    /**
      * @covers \Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Gateway\DoctrineDatabase::updateSubtreeModificationTime
      */
     public function testUpdateSubtreeModificationTime()
@@ -826,6 +860,14 @@ class DoctrineDatabaseTest extends TestCase
                 ->from('eztags')
                 ->where($query->expr->in('id', array(8, 7, 40)))
         );
+    }
+
+    /**
+     * @covers \Netgen\TagsBundle\Core\Persistence\Legacy\Tags\Gateway\DoctrineDatabase::updateSubtreeModificationTime
+     */
+    public function testUpdateSubtreeModificationTimeWithoutPathString()
+    {
+        $this->assertNull($this->tagsGateway->updateSubtreeModificationTime('', 123));
     }
 
     /**
