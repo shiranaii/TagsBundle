@@ -34,3 +34,10 @@ services:
             - "@eztags.api.service.tags.inner"
             - "@ezpublish.api.service.search"
 
+    eztags.import.command:
+        class: Netgen\TagsBundle\Command\ImportTagsCommand
+        public: false
+        arguments:
+            - "@ezpublish.api.repository"
+            - "@serializer"
+            - "@eztags.api.service.tags"
