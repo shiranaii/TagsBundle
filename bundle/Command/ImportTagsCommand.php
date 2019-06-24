@@ -9,26 +9,26 @@ use eZ\Publish\API\Repository\Values\Content\Language;
 use eZ\Publish\Core\Repository\Values\User\UserReference;
 use Netgen\TagsBundle\API\Repository\TagsService;
 use Netgen\TagsBundle\API\Repository\Values\Tags\Tag;
+use RuntimeException;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Serializer\Serializer;
-use RuntimeException;
 
 class ImportTagsCommand extends Command
 {
-    /** @var \eZ\Publish\API\Repository\Repository  */
+    /** @var \eZ\Publish\API\Repository\Repository */
     private $repository;
 
-    /** @var \Symfony\Component\Serializer\Serializer  */
+    /** @var \Symfony\Component\Serializer\Serializer */
     private $serializer;
 
-    /** @var \Netgen\TagsBundle\API\Repository\TagsService  */
+    /** @var \Netgen\TagsBundle\API\Repository\TagsService */
     private $tagsService;
 
-    /** @var \Symfony\Component\Console\Style\SymfonyStyle  */
+    /** @var \Symfony\Component\Console\Style\SymfonyStyle */
     private $style;
 
     public function __construct(
@@ -47,7 +47,7 @@ class ImportTagsCommand extends Command
     {
         $this
             ->setName('netgen:tags:import')
-            ->setDescription("Creates new tags based on an already existing CSV file.")
+            ->setDescription('Creates new tags based on an already existing CSV file.')
             ->setHelp("This command creates new tags based on an already existing CSV file. The filename parameter is required and should contain the full path of the file. The parent-tag-id parameter is optional nd should contain the ID of the tag underneath which to add the newly created tags. 
             
             The file headers should be language codes. The script supports an additional header 'RemoteID', which sets the remote id value of the tag imported - this is particularly useful when connecting tags from a different system.")
@@ -97,7 +97,7 @@ class ImportTagsCommand extends Command
         $this->style->text('Found file on the specified location.');
 
         // See RFC 7111 for clarification on text/csv MIME type usage
-        if (!mime_content_type($filename) == 'text/csv') {
+        if (!mime_content_type($filename) === 'text/csv') {
             throw new RuntimeException('The file is not a valid CSV.');
         }
 
@@ -114,7 +114,7 @@ class ImportTagsCommand extends Command
         $this->style->text("Found <comment>{$dataCount}</comment> tags for import from the file.");
 
         $availableLanguageCodes = array_map(
-            function (Language $language) {
+            static function (Language $language) {
                 return $language->languageCode;
             },
             $this->repository->getContentLanguageService()->loadLanguages()
@@ -139,6 +139,7 @@ class ImportTagsCommand extends Command
                     $this->style->text("Found already existing tag with remote ID <comment>{$tag->remoteId}</comment>.");
                     $this->style->progressAdvance();
                     unset($tagCreateStruct);
+
                     continue;
                 }
             }
@@ -154,6 +155,6 @@ class ImportTagsCommand extends Command
 
         $this->style->progressFinish();
 
-        $this->style->text("Import complete.");
+        $this->style->text('Import complete.');
     }
 }
