@@ -3,7 +3,6 @@ dist: xenial
 language: php
 
 php:
-  - 7.3
   - 7.4snapshot
 
 cache:
@@ -15,26 +14,13 @@ env:
   - CONFIG="phpunit-integration-legacy.xml" COVERAGE="integration"
 
 matrix:
-  include:
-    - php: 7.3
-      env: RUN_PHPSTAN="yes"
-    -
-      env: ~
-      php: ~
-      cache: ~
-      language: node_js
-      node_js: node
-      install: yarn install
-      before_script: yarn global add grunt-cli
-      script: grunt build
-  allow_failures:
-    - php: 7.4snapshot
   fast_finish: true
 
 branches:
   only:
     - dev
     - master
+    - php74
     - /^\d.\d+-release$/
 
 before_script:
@@ -45,18 +31,15 @@ before_script:
 
   - composer update --no-suggest --prefer-dist
 
+  - pecl install intl
+  - sed -i '200 a dump($value);' vendor/ezsystems/ezpublish-kernel/eZ/Publish/Core/Persistence/TransformationProcessor/PcreCompiler.php
+
 script:
   # - composer validate --strict
   - if [ "$CONFIG" != "" ] ; then vendor/bin/phpunit -c $CONFIG --coverage-clover=coverage.xml --colors=always ; fi
-  - if [ "$RUN_PHPSTAN" != "" ] ; then composer phpstan ; fi
-  - if [ "$RUN_PHPSTAN" != "" ] ; then composer phpstan-tests ; fi
 
 notifications:
   email: false
 
 git:
   depth: 1
-
-# send coverage to codecov.io
-after_success:
-  - if [ "$COVERAGE" != "" ] ; then bash <(curl -s https://codecov.io/bash) -F $COVERAGE ; fi
